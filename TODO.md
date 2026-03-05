@@ -134,6 +134,8 @@ upload. It needs a Google Play service account:
 
 - [x] Design proper splash screen assets (TrustSky logo on dark background)
 - [x] Add adaptive icon foreground/background for Android
+- [ ] Make repo public and add QR code badges to README.md for latest
+      Android APK and iOS IPA release downloads
 - [ ] Write App Store / Play Store listing copy
 - [ ] Prepare screenshots for both stores
 - [ ] Privacy policy URL (required by both stores)
