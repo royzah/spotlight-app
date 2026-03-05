@@ -120,3 +120,15 @@ jobs:
             build-output/trustsky-spotlight-release.aab \
             --title "Release ${{ github.ref_name }}" \
             --generate-notes
+
+      - name: Release summary
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          {
+            echo "### TrustSky Spotlight ${{ github.ref_name }}"
+            echo ""
+            echo "Release created with signed APK and AAB."
+            echo ""
+            echo "- [View release](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }})"
+            echo "- Commit: \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
