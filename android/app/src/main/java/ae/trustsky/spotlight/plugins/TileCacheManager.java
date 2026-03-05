@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -60,20 +61,20 @@ public class TileCacheManager {
     return stripped;
   }
 
-  /** Retrieve cached tile data by URL. Returns null if not cached. */
+  /** Retrieve cached tile data by URL. Returns empty array if not cached. */
   public byte[] get(String url) {
     String key = cacheKeyFromUrl(url);
     File file = new File(cacheDir, key);
 
     if (!file.exists()) {
-      return null;
+      return new byte[0];
     }
 
     try {
       return readFile(file);
     } catch (IOException e) {
       Log.w(TAG, "Failed to read cached tile: " + key, e);
-      return null;
+      return new byte[0];
     }
   }
 
@@ -101,9 +102,12 @@ public class TileCacheManager {
 
     for (File file : files) {
       if (file.getName().startsWith(regionPrefix)) {
-        if (file.delete()) {
+        try {
+          Files.delete(file.toPath());
           fileSizeMap.remove(file.getName());
           deleted++;
+        } catch (IOException e) {
+          Log.w(TAG, "Failed to delete tile: " + file.getName(), e);
         }
       }
     }
@@ -118,8 +122,11 @@ public class TileCacheManager {
     if (files == null) return 0;
 
     for (File file : files) {
-      if (file.delete()) {
+      try {
+        Files.delete(file.toPath());
         deleted++;
+      } catch (IOException e) {
+        Log.w(TAG, "Failed to delete tile: " + file.getName(), e);
       }
     }
     fileSizeMap.clear();
@@ -189,7 +196,11 @@ public class TileCacheManager {
     }
     if (!tempFile.renameTo(file)) {
       // Fallback: direct write if rename fails
-      tempFile.delete();
+      try {
+        Files.delete(tempFile.toPath());
+      } catch (IOException e) {
+        Log.w(TAG, "Failed to clean up temp file: " + tempFile.getName(), e);
+      }
       try (FileOutputStream fos = new FileOutputStream(file)) {
         fos.write(data);
         fos.getFD().sync();

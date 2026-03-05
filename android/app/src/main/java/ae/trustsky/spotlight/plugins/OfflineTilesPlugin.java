@@ -26,6 +26,10 @@ import org.json.JSONException;
 public class OfflineTilesPlugin extends Plugin {
 
   private static final String TAG = "OfflineTilesPlugin";
+  private static final String KEY_REGION_ID = "regionId";
+  private static final String KEY_STATUS = "status";
+  private static final String KEY_CANCELLED = "cancelled";
+  private static final String EVENT_DOWNLOAD_PROGRESS = "downloadProgress";
 
   private TileCacheManager cacheManager;
   private TileInterceptor interceptor;
@@ -43,33 +47,32 @@ public class OfflineTilesPlugin extends Plugin {
     bridge
         .getWebView()
         .post(
-            () -> {
-              bridge.setWebViewClient(
-                  new BridgeWebViewClient(bridge) {
-                    @Override
-                    public WebResourceResponse shouldInterceptRequest(
-                        WebView view, WebResourceRequest request) {
-                      if (interceptor.isEnabled()) {
-                        WebResourceResponse resp = interceptor.intercept(request);
-                        if (resp != null) return resp;
+            () ->
+                bridge.setWebViewClient(
+                    new BridgeWebViewClient(bridge) {
+                      @Override
+                      public WebResourceResponse shouldInterceptRequest(
+                          WebView view, WebResourceRequest request) {
+                        if (interceptor.isEnabled()) {
+                          WebResourceResponse resp = interceptor.intercept(request);
+                          if (resp != null) return resp;
+                        }
+                        return super.shouldInterceptRequest(view, request);
                       }
-                      return super.shouldInterceptRequest(view, request);
-                    }
 
-                    @Override
-                    public void onReceivedError(
-                        WebView view, WebResourceRequest request, WebResourceError error) {
-                      if (request.isForMainFrame()) {
-                        Log.w(TAG, "Main frame load failed: " + error.getDescription());
-                        String retryUrl = request.getUrl().toString();
-                        view.loadUrl(
-                            "file:///android_asset/public/index.html#retry=" + retryUrl);
-                        return;
+                      @Override
+                      public void onReceivedError(
+                          WebView view, WebResourceRequest request, WebResourceError error) {
+                        if (request.isForMainFrame()) {
+                          Log.w(TAG, "Main frame load failed: " + error.getDescription());
+                          String retryUrl = request.getUrl().toString();
+                          view.loadUrl(
+                              "file:///android_asset/public/index.html#retry=" + retryUrl);
+                          return;
+                        }
+                        super.onReceivedError(view, request, error);
                       }
-                      super.onReceivedError(view, request, error);
-                    }
-                  });
-            });
+                    }));
 
     Log.d(TAG, "OfflineTilesPlugin loaded, interceptor installed");
   }
@@ -83,7 +86,7 @@ public class OfflineTilesPlugin extends Plugin {
    */
   @PluginMethod
   public void downloadRegion(PluginCall call) {
-    String regionId = call.getString("regionId");
+    String regionId = call.getString(KEY_REGION_ID);
     if (regionId == null || regionId.isEmpty()) {
       call.reject("regionId is required");
       return;
@@ -95,53 +98,29 @@ public class OfflineTilesPlugin extends Plugin {
       return;
     }
 
-    int minZoom = call.getInt("minZoom", 0);
-    int maxZoom = call.getInt("maxZoom", 14);
-    String styleName = call.getString("styleName", "dark-v11");
     String accessToken = call.getString("accessToken");
-
     if (accessToken == null || accessToken.isEmpty()) {
       call.reject("accessToken is required");
       return;
     }
 
-    double[] bbox;
-    try {
-      bbox =
-          new double[] {
-            bboxArray.getDouble(0),
-            bboxArray.getDouble(1),
-            bboxArray.getDouble(2),
-            bboxArray.getDouble(3)
-          };
-    } catch (JSONException e) {
-      call.reject("Invalid bbox values: " + e.getMessage());
+    double[] bbox = parseBbox(bboxArray);
+    if (bbox == null) {
+      call.reject("Invalid bbox values");
       return;
     }
 
-    // Parse layer types
-    List<TileDownloadManager.TileLayer> layers = new ArrayList<>();
-    JSONArray layerArray = call.getArray("layers");
-    if (layerArray != null) {
-      for (int i = 0; i < layerArray.length(); i++) {
-        try {
-          String layerName = layerArray.getString(i).toUpperCase();
-          layers.add(TileDownloadManager.TileLayer.valueOf(layerName));
-        } catch (Exception e) {
-          Log.w(TAG, "Unknown layer type at index " + i + ", skipping");
-        }
-      }
-    }
-    if (layers.isEmpty()) {
-      layers.add(TileDownloadManager.TileLayer.VECTOR);
-    }
+    int minZoom = call.getInt("minZoom", 0);
+    int maxZoom = call.getInt("maxZoom", 14);
+    String styleName = call.getString("styleName", "dark-v11");
+    List<TileDownloadManager.TileLayer> layers = parseLayers(call.getArray("layers"));
 
     // Resolve the call immediately — progress comes via events
     JSObject result = new JSObject();
     int estimate = TileDownloadManager.estimateTileCount(bbox, minZoom, maxZoom, layers.size());
-    result.put("regionId", regionId);
+    result.put(KEY_REGION_ID, regionId);
     result.put("estimatedTiles", estimate);
-    result.put("status", "started");
+    result.put(KEY_STATUS, "started");
     call.resolve(result);
 
     // Start the download with progress events
@@ -157,30 +136,30 @@ public class OfflineTilesPlugin extends Plugin {
           @Override
           public void onProgress(String regionId, int completed, int total, float percentage) {
             JSObject event = new JSObject();
-            event.put("regionId", regionId);
+            event.put(KEY_REGION_ID, regionId);
             event.put("completed", completed);
             event.put("total", total);
             event.put("percentage", Math.round(percentage * 10) / 10.0);
-            notifyListeners("downloadProgress", event);
+            notifyListeners(EVENT_DOWNLOAD_PROGRESS, event);
           }
 
           @Override
           public void onComplete(String regionId, int totalTiles, boolean cancelled) {
             JSObject event = new JSObject();
-            event.put("regionId", regionId);
+            event.put(KEY_REGION_ID, regionId);
             event.put("totalTiles", totalTiles);
-            event.put("cancelled", cancelled);
-            event.put("status", cancelled ? "cancelled" : "complete");
-            notifyListeners("downloadProgress", event);
+            event.put(KEY_CANCELLED, cancelled);
+            event.put(KEY_STATUS, cancelled ? KEY_CANCELLED : "complete");
+            notifyListeners(EVENT_DOWNLOAD_PROGRESS, event);
           }
 
           @Override
           public void onError(String regionId, String error) {
             JSObject event = new JSObject();
-            event.put("regionId", regionId);
+            event.put(KEY_REGION_ID, regionId);
             event.put("error", error);
-            event.put("status", "error");
-            notifyListeners("downloadProgress", event);
+            event.put(KEY_STATUS, "error");
+            notifyListeners(EVENT_DOWNLOAD_PROGRESS, event);
           }
         });
   }
@@ -188,7 +167,7 @@ public class OfflineTilesPlugin extends Plugin {
   /** Cancel an in-progress download. Args: regionId: string */
   @PluginMethod
   public void cancelDownload(PluginCall call) {
-    String regionId = call.getString("regionId");
+    String regionId = call.getString(KEY_REGION_ID);
     if (regionId == null || regionId.isEmpty()) {
       call.reject("regionId is required");
       return;
@@ -197,8 +176,8 @@ public class OfflineTilesPlugin extends Plugin {
     downloadManager.cancel(regionId);
 
     JSObject result = new JSObject();
-    result.put("regionId", regionId);
-    result.put("status", "cancelled");
+    result.put(KEY_REGION_ID, regionId);
+    result.put(KEY_STATUS, KEY_CANCELLED);
     call.resolve(result);
   }
 
@@ -255,5 +234,36 @@ public class OfflineTilesPlugin extends Plugin {
     JSObject result = new JSObject();
     result.put("enabled", enabled);
     call.resolve(result);
+  }
+
+  private static double[] parseBbox(JSONArray bboxArray) {
+    try {
+      return new double[] {
+        bboxArray.getDouble(0),
+        bboxArray.getDouble(1),
+        bboxArray.getDouble(2),
+        bboxArray.getDouble(3)
+      };
+    } catch (JSONException e) {
+      return null;
+    }
+  }
+
+  private static List<TileDownloadManager.TileLayer> parseLayers(JSONArray layerArray) {
+    List<TileDownloadManager.TileLayer> layers = new ArrayList<>();
+    if (layerArray != null) {
+      for (int i = 0; i < layerArray.length(); i++) {
+        try {
+          String layerName = layerArray.getString(i).toUpperCase();
+          layers.add(TileDownloadManager.TileLayer.valueOf(layerName));
+        } catch (Exception e) {
+          Log.w(TAG, "Unknown layer type at index " + i + ", skipping");
+        }
+      }
+    }
+    if (layers.isEmpty()) {
+      layers.add(TileDownloadManager.TileLayer.VECTOR);
+    }
+    return layers;
   }
 }

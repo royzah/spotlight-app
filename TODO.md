@@ -215,9 +215,9 @@ mobile-only UI and behavior. Native code lives in this repo
 ### Broadcast Remote ID (BRID) Scanner
 
 - [ ] **Detect nearby drones via Bluetooth/WiFi Remote ID** -- scan for
-  ASTM F3411 / ASD-STAN prEN 4709-002 Broadcast Remote ID signals
-  and display detected drones on the map, behaving exactly like
-  existing telemetry-based `DroneMarkers`.
+      ASTM F3411 / ASD-STAN prEN 4709-002 Broadcast Remote ID signals
+      and display detected drones on the map, behaving exactly like
+      existing telemetry-based `DroneMarkers`.
 
 Reference app: [OpenDroneID OSM](https://play.google.com/store/apps/details?id=org.opendroneid.android_osm)
 ([source](https://github.com/opendroneid/receiver-android)).
@@ -232,14 +232,14 @@ server.
 
 **Data from each BRID message pack:**
 
-| Message Type | Fields |
-| ------------ | ------ |
-| Basic ID | UAS ID (serial number or session ID), UA type |
-| Location | lat, lng, altitude (geo + pressure), speed, heading, vertical speed, timestamp |
-| System | operator lat/lng, area count, area radius, classification |
-| Self-ID | free-text description of the operation |
-| Operator ID | operator registration ID |
-| Authentication | auth type, page count, data (optional, may be encrypted) |
+| Message Type   | Fields                                                                         |
+| -------------- | ------------------------------------------------------------------------------ |
+| Basic ID       | UAS ID (serial number or session ID), UA type                                  |
+| Location       | lat, lng, altitude (geo + pressure), speed, heading, vertical speed, timestamp |
+| System         | operator lat/lng, area count, area radius, classification                      |
+| Self-ID        | free-text description of the operation                                         |
+| Operator ID    | operator registration ID                                                       |
+| Authentication | auth type, page count, data (optional, may be encrypted)                       |
 
 **Implementation plan:**
 
@@ -248,16 +248,16 @@ server.
    OpenDroneID packet parsing in native code. Emits
    `droneDetected` events to the web layer with parsed data.
 
-   *Android:* Use `BluetoothLeScanner` with `ScanFilter` for
+   _Android:_ Use `BluetoothLeScanner` with `ScanFilter` for
    the OpenDroneID service UUID (`0xFFFA`). Use
    `WifiAwareManager` for WiFi NAN. Requires permissions
    `BLUETOOTH_SCAN`, `ACCESS_FINE_LOCATION`, and
    `NEARBY_WIFI_DEVICES` (API 33+).
 
-   *iOS:* Use `CoreBluetooth` `CBCentralManager` to scan for
+   _iOS:_ Use `CoreBluetooth` `CBCentralManager` to scan for
    the same service UUID. WiFi NAN is not available on iOS.
 
-   *Parsing:* Port or depend on
+   _Parsing:_ Port or depend on
    [opendroneid-core-c](https://github.com/opendroneid/opendroneid-core-c)
    for decoding the packed message format, or implement the
    simple TLV parser directly (the spec is small).

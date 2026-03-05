@@ -8,7 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -73,7 +73,7 @@ public class TileInterceptor {
 
     // Check cache first
     byte[] cached = cacheManager.get(urlString);
-    if (cached != null) {
+    if (cached.length > 0) {
       Log.d(TAG, "Cache HIT: " + urlString);
       String mimeType = detectMimeType(urlString);
       return buildResponse(mimeType, cached);
@@ -83,7 +83,7 @@ public class TileInterceptor {
     Log.d(TAG, "Cache MISS, fetching: " + urlString);
     try {
       byte[] data = fetchFromNetwork(urlString, request.getRequestHeaders());
-      if (data != null) {
+      if (data.length > 0) {
         cacheManager.put(urlString, data);
         String mimeType = detectMimeType(urlString);
         return buildResponse(mimeType, data);
@@ -99,14 +99,8 @@ public class TileInterceptor {
   /** Check if the host is a Mapbox tile host. */
   private boolean isTileHost(String host) {
     if (host == null) return false;
-
-    // Exact match
     if (TILE_HOSTS.contains(host)) return true;
-
-    // Wildcard match for *.tiles.mapbox.com
-    if (host.endsWith(".tiles.mapbox.com")) return true;
-
-    return false;
+    return host.endsWith(".tiles.mapbox.com");
   }
 
   /** Detect MIME type from the URL path. */
@@ -153,8 +147,8 @@ public class TileInterceptor {
    */
   private byte[] fetchFromNetwork(String urlString, Map<String, String> requestHeaders)
       throws IOException {
-    URL url = new URL(urlString);
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    HttpURLConnection connection =
+        (HttpURLConnection) URI.create(urlString).toURL().openConnection();
     try {
       connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
       connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -177,17 +171,18 @@ public class TileInterceptor {
       int responseCode = connection.getResponseCode();
       if (responseCode != 200) {
         Log.w(TAG, "Non-200 response (" + responseCode + ") for: " + urlString);
-        return null;
+        return new byte[0];
       }
 
-      InputStream inputStream = connection.getInputStream();
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      byte[] buffer = new byte[8192];
-      int bytesRead;
-      while ((bytesRead = inputStream.read(buffer)) != -1) {
-        baos.write(buffer, 0, bytesRead);
+      try (InputStream inputStream = connection.getInputStream();
+          ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+          baos.write(buffer, 0, bytesRead);
+        }
+        return baos.toByteArray();
       }
-      return baos.toByteArray();
     } finally {
       connection.disconnect();
     }
