@@ -11,15 +11,15 @@ FROM node:20-slim AS base
 # Avoid prompts during package installs
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install JDK 17 + basic tools
+# Install JDK 21 (via Adoptium) + basic tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jdk-headless \
-    wget \
-    unzip \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+    wget unzip git gnupg && \
+    wget -qO- https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" > /etc/apt/sources.list.d/adoptium.list && \
+    apt-get update && apt-get install -y --no-install-recommends temurin-21-jdk && \
+    rm -rf /var/lib/apt/lists/*
 
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
 
 # ── Android SDK ──────────────────────────────────────────────
 ENV ANDROID_HOME=/opt/android-sdk
@@ -30,10 +30,8 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdtools.zip && \
     unzip -q /tmp/cmdtools.zip -d ${ANDROID_HOME}/cmdline-tools && \
     mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest && \
-    rm /tmp/cmdtools.zip
-
-# Accept licenses and install SDK components
-RUN yes | sdkmanager --licenses > /dev/null 2>&1 && \
+    rm /tmp/cmdtools.zip && \
+    yes | sdkmanager --licenses > /dev/null 2>&1 && \
     sdkmanager \
       "platform-tools" \
       "platforms;android-35" \
