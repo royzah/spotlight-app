@@ -68,17 +68,21 @@ jobs:
 
       # ── Release (on tag push, requires signing secrets) ───
       - uses: ruby/setup-ruby@v1
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.MATCH_GIT_URL != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.MATCH_GIT_URL != ''
         with:
           ruby-version: '3.2'
           bundler-cache: true
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
 
       - name: Install Fastlane
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.MATCH_GIT_URL != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.MATCH_GIT_URL != ''
         run: gem install fastlane
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
 
       - name: Fetch certificates
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.MATCH_GIT_URL != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.MATCH_GIT_URL != ''
         run: fastlane ios certificates
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -86,21 +90,24 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build release IPA
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.MATCH_GIT_URL != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.MATCH_GIT_URL != ''
         run: fastlane ios build_release
         env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           BUILD_NUMBER: ${{ github.run_number }}
 
       - name: Upload IPA artifact
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.MATCH_GIT_URL != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.MATCH_GIT_URL != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-release-ios
           path: build-output/TrustSkySpotlight-release.ipa
           retention-days: 90
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
 
       - name: Upload to TestFlight
-        if: startsWith(github.ref, 'refs/tags/v') && secrets.APP_STORE_CONNECT_API_KEY_ID != ''
+        if: startsWith(github.ref, 'refs/tags/v') && env.APP_STORE_CONNECT_API_KEY_ID != ''
         run: |
           fastlane deliver --ipa build-output/TrustSkySpotlight-release.ipa \
             --skip_screenshots --skip_metadata
@@ -114,7 +121,7 @@ jobs:
           {
             echo "### TrustSky Spotlight iOS Build"
             echo ""
-            if [[ "${{ github.ref }}" == refs/tags/v* && "${{ secrets.MATCH_GIT_URL }}" != "" ]]; then
+            if [[ "${{ github.ref }}" == refs/tags/v* && "$MATCH_GIT_URL" != "" ]]; then
               echo "Release IPA built and uploaded."
             elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
               echo "Debug build passed. Signing skipped (MATCH_GIT_URL not configured)."
@@ -124,3 +131,5 @@ jobs:
             echo ""
             echo "- Commit: \`${{ github.sha }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
