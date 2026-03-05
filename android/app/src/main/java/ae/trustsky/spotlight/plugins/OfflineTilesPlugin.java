@@ -1,6 +1,7 @@
 package ae.trustsky.spotlight.plugins;
 
 import android.util.Log;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -53,6 +54,19 @@ public class OfflineTilesPlugin extends Plugin {
                         if (resp != null) return resp;
                       }
                       return super.shouldInterceptRequest(view, request);
+                    }
+
+                    @Override
+                    public void onReceivedError(
+                        WebView view, WebResourceRequest request, WebResourceError error) {
+                      if (request.isForMainFrame()) {
+                        Log.w(TAG, "Main frame load failed: " + error.getDescription());
+                        String retryUrl = request.getUrl().toString();
+                        view.loadUrl(
+                            "file:///android_asset/public/index.html#retry=" + retryUrl);
+                        return;
+                      }
+                      super.onReceivedError(view, request, error);
                     }
                   });
             });

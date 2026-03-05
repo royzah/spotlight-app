@@ -212,6 +212,80 @@ mobile-only UI and behavior. Native code lives in this repo
       signal lost, geofence breach) even when the app is
       backgrounded.
 
+### Broadcast Remote ID (BRID) Scanner
+
+- [ ] **Detect nearby drones via Bluetooth/WiFi Remote ID** -- scan for
+  ASTM F3411 / ASD-STAN prEN 4709-002 Broadcast Remote ID signals
+  and display detected drones on the map, behaving exactly like
+  existing telemetry-based `DroneMarkers`.
+
+Reference app: [OpenDroneID OSM](https://play.google.com/store/apps/details?id=org.opendroneid.android_osm)
+([source](https://github.com/opendroneid/receiver-android)).
+
+**What it does:** Any drone or tracker broadcasting Remote ID
+(via Bluetooth 4 Legacy Advertising, Bluetooth 5 Long Range /
+Extended Advertising, WiFi NAN, or WiFi Beacon) will appear as
+a live marker on the map -- same icon, trail, altitude line, and
+detail panel as server-fed drones. This lets field operators see
+ALL nearby aircraft, not just those reporting to the TrustSky
+server.
+
+**Data from each BRID message pack:**
+
+| Message Type | Fields |
+| ------------ | ------ |
+| Basic ID | UAS ID (serial number or session ID), UA type |
+| Location | lat, lng, altitude (geo + pressure), speed, heading, vertical speed, timestamp |
+| System | operator lat/lng, area count, area radius, classification |
+| Self-ID | free-text description of the operation |
+| Operator ID | operator registration ID |
+| Authentication | auth type, page count, data (optional, may be encrypted) |
+
+**Implementation plan:**
+
+1. **Native Capacitor plugin** -- `BroadcastRemoteIdPlugin`
+   (Java for Android, Swift for iOS). Handles all scanning and
+   OpenDroneID packet parsing in native code. Emits
+   `droneDetected` events to the web layer with parsed data.
+
+   *Android:* Use `BluetoothLeScanner` with `ScanFilter` for
+   the OpenDroneID service UUID (`0xFFFA`). Use
+   `WifiAwareManager` for WiFi NAN. Requires permissions
+   `BLUETOOTH_SCAN`, `ACCESS_FINE_LOCATION`, and
+   `NEARBY_WIFI_DEVICES` (API 33+).
+
+   *iOS:* Use `CoreBluetooth` `CBCentralManager` to scan for
+   the same service UUID. WiFi NAN is not available on iOS.
+
+   *Parsing:* Port or depend on
+   [opendroneid-core-c](https://github.com/opendroneid/opendroneid-core-c)
+   for decoding the packed message format, or implement the
+   simple TLV parser directly (the spec is small).
+
+2. **Web hook** -- `useBroadcastRemoteId()` in
+   `trustsky-spotlight/src/hooks/`. Listens to plugin events,
+   maintains an in-memory `Map<string, BridDrone>` keyed by UAS
+   ID. Each entry has position, heading, speed, altitude, last
+   seen timestamp. Entries expire after 30 s (same as telemetry
+   store). Only active on native (`isNativePlatform()`).
+
+3. **Map integration** -- feed BRID drones into the existing
+   `DroneMarkers` pipeline via `FlightContext`, or create a
+   parallel `BridMarkers.tsx` renderless component (same layer
+   pattern: source, icon, glow, label, trail). Differentiate
+   BRID drones visually (e.g. orange icon or a "BRID" badge on
+   the label) so operators know the data source.
+
+4. **UI** -- toggle button in `MapControls` (mobile only) to
+   start/stop scanning. Show a count badge of detected BRID
+   aircraft. Tapping a BRID marker opens the same detail panel
+   with available fields (serial, altitude, speed, operator
+   location).
+
+5. **Permissions** -- request Bluetooth + nearby devices
+   permissions on first toggle. Handle denial gracefully
+   (show explanation, link to settings).
+
 ### Device Integration
 
 - [ ] **Camera capture for incident reports** -- attach photos

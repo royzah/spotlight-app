@@ -105,7 +105,18 @@
         This app needs a network connection for real-time drone monitoring, map data, and
         authentication.
       </p>
-      <button onclick="window.location.reload()">Try Again</button>
+      <button id="retry-btn">Try Again</button>
+      <script>
+        document.getElementById('retry-btn').onclick = function () {
+          var hash = window.location.hash || '';
+          var retry = hash.indexOf('#retry=') === 0 ? hash.substring(7) : '';
+          if (retry) {
+            window.location.href = retry;
+          } else {
+            window.location.reload();
+          }
+        };
+      </script>
     </div>
   </body>
 </html>

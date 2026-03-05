@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import WebKit
+import Network
 
 /// Custom subclass of CAPBridgeViewController that registers the
 /// `cachedtile://` WKURLSchemeHandler BEFORE the WKWebView is created.
@@ -41,5 +42,38 @@ class CustomViewController: CAPBridgeViewController {
         schemeHandler = handler
 
         return config
+    }
+
+    // MARK: - Offline Fallback
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        checkConnectivityOnLaunch()
+    }
+
+    /// Uses NWPathMonitor to check connectivity once at launch.
+    /// If the device is offline, loads the local offline fallback page
+    /// instead of letting the WKWebView show a blank error.
+    /// Does NOT replace Capacitor's WKNavigationDelegate.
+    private func checkConnectivityOnLaunch() {
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            monitor.cancel()
+            if path.status != .satisfied {
+                DispatchQueue.main.async {
+                    self?.loadOfflinePage()
+                }
+            }
+        }
+        monitor.start(queue: DispatchQueue.global(qos: .userInitiated))
+    }
+
+    private func loadOfflinePage() {
+        guard let webView = webView else { return }
+        let serverURL = bridge?.config.serverURL ?? ""
+        if let offlineURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "public") {
+            let urlWithRetry = URL(string: offlineURL.absoluteString + "#retry=\(serverURL)")!
+            webView.loadFileURL(urlWithRetry, allowingReadAccessTo: offlineURL.deletingLastPathComponent())
+        }
     }
 }
