@@ -73,29 +73,16 @@ jobs:
           name: trustsky-spotlight-debug
           path: build-output/trustsky-spotlight-debug.apk
 
-      - name: Upload debug APK to release
-        if: "!startsWith(github.ref, 'refs/tags/v')"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Remove old release + tag, then recreate
-          gh release delete debug-latest --cleanup-tag --yes 2>/dev/null || true
-          gh release create debug-latest \
-            build-output/trustsky-spotlight-debug.apk \
-            --title "Debug Build (latest)" \
-            --notes "Auto-updated debug APK from \`${{ github.sha }}\`" \
-            --prerelease \
-            --target "${{ github.sha }}"
-
       - name: QR code in job summary
         if: "!startsWith(github.ref, 'refs/tags/v')"
         run: |
-          APK_URL="${{ github.server_url }}/${{ github.repository }}/releases/download/debug-latest/trustsky-spotlight-debug.apk"
+          # nightly.link provides unauthenticated artifact downloads for private repos
+          APK_URL="https://nightly.link/${{ github.repository }}/actions/runs/${{ github.run_id }}/trustsky-spotlight-debug.zip"
           ENCODED_URL=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${APK_URL}', safe=''))")
           {
             echo "### TrustSky Spotlight Debug APK"
             echo ""
-            echo "Scan to download the APK directly to your phone."
+            echo "Scan to download (zip contains the APK):"
             echo ""
             echo "![QR code](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${ENCODED_URL})"
             echo ""

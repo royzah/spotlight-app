@@ -70,7 +70,7 @@ class CustomViewController: CAPBridgeViewController {
 
     private func loadOfflinePage() {
         guard let webView = webView else { return }
-        let serverURL = bridge?.config.serverURL?.absoluteString ?? ""
+        let serverURL = bridge?.config.serverURL.absoluteString ?? ""
         if let offlineURL = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "public") {
             let urlWithRetry = URL(string: offlineURL.absoluteString + "#retry=\(serverURL)")!
             webView.loadFileURL(urlWithRetry, allowingReadAccessTo: offlineURL.deletingLastPathComponent())
