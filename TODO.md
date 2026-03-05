@@ -68,8 +68,8 @@ App Store Connect API key (for TestFlight upload):
 
 ## App Store Readiness
 
-- [ ] Design proper splash screen assets (currently using dark background only)
-- [ ] Add adaptive icon foreground/background for Android (currently using raster icon)
+- [x] Design proper splash screen assets (TrustSky logo on dark background)
+- [x] Add adaptive icon foreground/background for Android
 - [ ] Write App Store / Play Store listing copy
 - [ ] Prepare screenshots for both stores
 - [ ] Privacy policy URL (required by both stores)
@@ -112,17 +112,18 @@ mobile-only UI and behavior. Native code lives in this repo
 - [ ] **Biometric login** -- fingerprint or face unlock to skip
       password entry on trusted devices. Use `capacitor-native-biometric`
       plugin. Stores session token in secure enclave.
-- [ ] **Keep screen awake** -- prevent screen timeout during active
-      drone monitoring sessions. Use `@capacitor-community/keep-awake`.
+- [x] **Keep screen awake** -- prevent screen timeout during active
+      drone monitoring sessions. Plugin installed, hook at
+      `trustsky-spotlight/src/hooks/useKeepAwake.ts`.
 - [ ] **Haptic alerts** -- vibration feedback for critical events
       (geofence breach, loss of telemetry, low battery warning).
       Use `@capacitor/haptics`.
 
 ### Communication and Sharing
 
-- [ ] **Share drone report** -- native share sheet to send a drone
-      status snapshot (screenshot + telemetry summary) via WhatsApp,
-      email, or other apps. Use `@capacitor/share`.
+- [x] **Share drone report** -- native share sheet to send a drone
+      status snapshot via WhatsApp, email, or other apps. Plugin
+      installed, helper at `trustsky-spotlight/src/lib/share.ts`.
 - [ ] **QR code scanner** -- scan a drone's QR code to instantly
       pull up its profile and telemetry. Use `@capacitor-community/barcode-scanner`.
 
@@ -131,9 +132,9 @@ mobile-only UI and behavior. Native code lives in this repo
 - [ ] **Offline telemetry queue** -- when connectivity drops, queue
       telemetry submissions locally and sync when back online.
       Use `@capacitor/network` to detect status changes.
-- [ ] **Auto-download tiles on Wi-Fi** -- detect Wi-Fi via
-      `@capacitor/network` and automatically pre-cache the
-      operational area tiles without user intervention.
+- [x] **Auto-download tiles on Wi-Fi** -- detect Wi-Fi and
+      automatically pre-cache UAE tiles. Plugin installed, hook
+      at `trustsky-spotlight/src/hooks/useAutoTileDownload.ts`.
 
 ### Notifications
 
@@ -153,9 +154,9 @@ mobile-only UI and behavior. Native code lives in this repo
       `@capacitor/camera`.
 - [ ] **Voice-to-text notes** -- hands-free note-taking during
       field operations using `@capacitor-community/speech-recognition`.
-- [ ] **Compass heading overlay** -- show device compass bearing
-      on the map to help operators orient toward a drone's
-      physical location. Use `@capacitor/motion`.
+- [x] **Compass heading overlay** -- device compass bearing for
+      orienting toward drones. Plugin installed, hook at
+      `trustsky-spotlight/src/hooks/useCompassHeading.ts`.
 
 ## Performance
 

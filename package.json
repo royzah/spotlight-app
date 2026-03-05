@@ -18,13 +18,16 @@
     "lint:ts": "tsc --noEmit"
   },
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.0",
     "@capacitor/android": "^8.0.0",
-    "@capacitor/app": "^7.0.0",
+    "@capacitor/app": "^8.0.1",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
-    "@capacitor/network": "^7.0.0",
-    "@capacitor/splash-screen": "^7.0.0",
-    "@capacitor/status-bar": "^7.0.0"
+    "@capacitor/motion": "^8.0.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
