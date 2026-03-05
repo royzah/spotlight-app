@@ -66,6 +66,70 @@ App Store Connect API key (for TestFlight upload):
 - [ ] Create Apple Developer App ID for `ae.trustsky.spotlight`
 - [ ] Test full CI/CD pipeline: push a `v1.0.0` tag, verify artifacts
 
+## Google Play Store Distribution
+
+The CI produces signed release artifacts on `v*` tag push. Play Store
+upload is a separate step.
+
+### Setup (one-time)
+
+1. Register a Google Play Developer account ($25 one-time) at
+   [play.google.com/console](https://play.google.com/console).
+2. Create the app in Play Console:
+   - App name: **TrustSky Spotlight**
+   - Package: `ae.trustsky.spotlight` (auto-matched from AAB)
+   - Complete store listing: description, screenshots, feature
+     graphic, privacy policy URL.
+3. The **first AAB upload must be done manually** through Play Console.
+   Google does not allow automated first uploads.
+
+### Release workflow
+
+Recommended testing tracks (go in order, not straight to Production):
+
+| Track                | Who sees it                | Review             |
+| -------------------- | -------------------------- | ------------------ |
+| **Internal testing** | Up to 100 testers by email | No review, instant |
+| **Closed testing**   | Invite-only groups         | Light review       |
+| **Open testing**     | Anyone with link           | Full review        |
+| **Production**       | Everyone on Play Store     | Full review        |
+
+Steps:
+
+1. Tag and push: `git tag v1.0.0 && git push origin v1.0.0`
+2. CI builds signed APK + AAB (see **Artifacts** in the GitHub
+   Actions run).
+3. Download `trustsky-spotlight-release-aab` from the CI artifacts.
+4. Upload to Play Console > **Internal testing** > **Create new
+   release** > upload the `.aab` > add release notes > submit.
+5. Invite testers by email. They install via a Play Store link
+   (no "unknown sources" needed).
+6. When stable, promote the release through Closed > Open >
+   Production in Play Console.
+
+### Direct APK install (without Play Store)
+
+For quick team distribution before Play Store is set up:
+
+1. Download `trustsky-spotlight-release-apk` from CI artifacts.
+2. Transfer to phone (email, shared drive, direct download).
+3. Open the `.apk` on the phone, allow "Install from unknown
+   sources" when prompted.
+
+### Automate uploads (optional, after first manual upload)
+
+The Fastlane `android beta` lane is preconfigured for Play Store
+upload. It needs a Google Play service account:
+
+1. Play Console > **Setup** > **API access** > create/link a
+   Google Cloud project.
+2. Create a service account with "Release manager" role.
+3. Download the JSON key, base64-encode it:
+   `base64 -w 0 play-service-account.json`
+4. Add GitHub secret: `GOOGLE_PLAY_JSON_KEY_BASE64`.
+5. Add an upload step to `android-build.yml` or run
+   `fastlane android beta` locally.
+
 ## App Store Readiness
 
 - [x] Design proper splash screen assets (TrustSky logo on dark background)

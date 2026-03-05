@@ -22,6 +22,13 @@ class CustomViewController: CAPBridgeViewController {
     /// view controller (and therefore the WKWebView).
     private var schemeHandler: TileSchemeHandler?
 
+    // MARK: - Status Bar
+
+    /// Light status bar text (white) to match the dark app theme.
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+
     // MARK: - WKWebView Configuration
 
     /// Called by CAPBridgeViewController before creating the WKWebView.

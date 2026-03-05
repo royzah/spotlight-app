@@ -18,10 +18,10 @@ const config: CapacitorConfig = {
       autoHideDelay: 2000,
       showSpinner: false,
     },
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#131318',
-    },
+    // StatusBar: removed @capacitor/status-bar (incompatible with
+    // capacitor-swift-pm 8.0.x). Status bar is styled natively:
+    //   Android: styles.xml android:statusBarColor
+    //   iOS: Info.plist UIStatusBarStyle + preferredStatusBarStyle
   },
   android: {
     allowMixedContent: true,
