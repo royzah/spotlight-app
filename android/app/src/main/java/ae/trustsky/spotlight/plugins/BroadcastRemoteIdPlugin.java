@@ -58,6 +58,9 @@ public class BroadcastRemoteIdPlugin extends Plugin {
     private static final ParcelUuid ODID_SERVICE_UUID =
         ParcelUuid.fromString("0000FFFA-0000-1000-8000-00805F9B34FB");
 
+    /** OpenDroneID application code (0x0D) — first byte of service data. */
+    private static final byte[] ODID_AD_CODE = new byte[]{(byte) 0x0D};
+
     private BluetoothLeScanner scanner;
     private boolean scanning = false;
     private final SimpleDateFormat isoFormat;
@@ -91,13 +94,27 @@ public class BroadcastRemoteIdPlugin extends Plugin {
         }
 
         private void processScanResult(ScanResult result) {
-            byte[] serviceData = null;
+            if (result.getScanRecord() == null) return;
 
-            if (result.getScanRecord() != null) {
-                serviceData = result.getScanRecord().getServiceData(ODID_SERVICE_UUID);
+            // Try getServiceData first (returns bytes after UUID: appCode + counter + message)
+            byte[] serviceData = result.getScanRecord().getServiceData(ODID_SERVICE_UUID);
+
+            if (serviceData == null || serviceData.length < 27) {
+                // Fallback: some Android versions return null from getServiceData.
+                // Parse raw advertisement bytes like the reference receiver-android app.
+                serviceData = result.getScanRecord().getBytes();
+                if (serviceData == null) return;
+                // In raw bytes, find the OpenDroneID payload starting at the AD code 0x0D
+                // Layout: ... [len] [0x16] [FA] [FF] [0x0D] [counter] [25-byte msg] ...
+                // getBytes() includes all AD structures; scan for our service data
+                int idx = OpenDroneIdParser.findOdidPayload(serviceData);
+                if (idx < 0) return;
+                // Extract from appCode onward
+                int payloadLen = serviceData.length - idx;
+                byte[] extracted = new byte[payloadLen];
+                System.arraycopy(serviceData, idx, extracted, 0, payloadLen);
+                serviceData = extracted;
             }
-
-            if (serviceData == null || serviceData.length < 2) return;
 
             OpenDroneIdParser.DroneInfo info = OpenDroneIdParser.parseServiceData(serviceData);
 
@@ -161,9 +178,9 @@ public class BroadcastRemoteIdPlugin extends Plugin {
             return;
         }
 
-        // Filter for OpenDroneID service UUID 0xFFFA
+        // Filter for OpenDroneID service UUID 0xFFFA with app code 0x0D
         ScanFilter filter = new ScanFilter.Builder()
-            .setServiceData(ODID_SERVICE_UUID, new byte[]{})
+            .setServiceData(ODID_SERVICE_UUID, ODID_AD_CODE)
             .build();
 
         List<ScanFilter> filters = new ArrayList<>();

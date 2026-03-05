@@ -64,14 +64,17 @@ public class OpenDroneIdParser {
 
     /**
      * Parse BLE service data for UUID 0xFFFA.
-     * The first byte is an application code (counter), actual messages start at offset 1.
+     * After Android strips the 16-bit UUID, the data layout is:
+     *   Byte 0: Application Code (0x0D for OpenDroneID)
+     *   Byte 1: 8-bit message counter
+     *   Bytes 2+: 25-byte OpenDroneID message(s)
      */
     public static DroneInfo parseServiceData(byte[] data) {
         DroneInfo info = new DroneInfo();
-        if (data == null || data.length < 2) return info;
+        if (data == null || data.length < 3) return info;
 
-        // Skip the first byte (application code / message counter)
-        int offset = 1;
+        // Skip application code (0x0D) and message counter
+        int offset = 2;
         int remaining = data.length - offset;
 
         if (remaining < MSG_SIZE) return info;
@@ -197,6 +200,33 @@ public class OpenDroneIdParser {
     private static void parseOperatorId(byte[] data, int p, DroneInfo info) {
         // Bytes 1..20: operator registration ID (null-terminated ASCII)
         info.operatorRegistrationId = extractString(data, p + 1, 20);
+    }
+
+    /**
+     * Find the OpenDroneID payload in raw BLE advertisement bytes.
+     * Scans for AD type 0x16 with UUID 0xFFFA and app code 0x0D.
+     * Returns the index of the app code byte, or -1 if not found.
+     */
+    public static int findOdidPayload(byte[] raw) {
+        if (raw == null) return -1;
+        int i = 0;
+        while (i < raw.length) {
+            int adLen = raw[i] & 0xFF;
+            if (adLen == 0 || i + adLen >= raw.length) break;
+            // AD type at i+1, data starts at i+2
+            int adType = raw[i + 1] & 0xFF;
+            if (adType == 0x16 && adLen >= 5) {
+                // Check for UUID 0xFFFA (little-endian: FA FF)
+                int uuidLo = raw[i + 2] & 0xFF;
+                int uuidHi = raw[i + 3] & 0xFF;
+                if (uuidLo == 0xFA && uuidHi == 0xFF) {
+                    // App code at i+4, counter at i+5, message at i+6
+                    return i + 4;
+                }
+            }
+            i += adLen + 1;
+        }
+        return -1;
     }
 
     /** Extract a null-terminated ASCII string from a byte array. */

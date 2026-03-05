@@ -42,12 +42,15 @@ struct OpenDroneIdParser {
     // MARK: - Public API
 
     /// Parse BLE service data for UUID 0xFFFA.
-    /// The first byte is an application code (counter); actual messages start at offset 1.
+    /// After the platform strips the 16-bit UUID, the data layout is:
+    ///   Byte 0: Application Code (0x0D for OpenDroneID)
+    ///   Byte 1: 8-bit message counter
+    ///   Bytes 2+: 25-byte OpenDroneID message(s)
     static func parseServiceData(_ data: Data) -> DroneInfo {
         var info = DroneInfo()
-        guard data.count >= 2 else { return info }
+        guard data.count >= 3 else { return info }
 
-        let offset = 1 // skip application code byte
+        let offset = 2 // skip application code (0x0D) + message counter
         let remaining = data.count - offset
         guard remaining >= msgSize else { return info }
 
