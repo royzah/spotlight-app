@@ -6,7 +6,6 @@ import Foundation
 /// Uses slippy-map math to convert lat/lon bbox to tile coordinates, then
 /// fetches vector, satellite, and terrain tiles concurrently (max 4 at a time).
 final class TileDownloadManager {
-
     // MARK: - Types
 
     /// Progress callback delivered on every tile completion.
@@ -68,15 +67,24 @@ final class TileDownloadManager {
         let fontStacks = [
             "DIN Pro Regular,Arial Unicode MS Regular",
             "DIN Pro Medium,Arial Unicode MS Regular",
-            "DIN Pro Bold,Arial Unicode MS Bold"
+            "DIN Pro Bold,Arial Unicode MS Bold",
         ]
         let glyphRanges = [
+            // Latin, Latin Extended, Greek, Cyrillic
             "0-255", "256-511", "512-767", "768-1023",
-            "8192-8447", "8448-8703", "65024-65279"
+            // Arabic (U+0600–U+06FF) and Arabic Supplement (U+0750–U+077F)
+            "1536-1791", "1792-2047",
+            // General Punctuation, Superscripts
+            "8192-8447", "8448-8703",
+            // Arabic Presentation Forms-A (U+FB50–U+FDFF)
+            "64256-64511", "64512-64767", "64768-65023",
+            // Variation Selectors + Arabic Presentation Forms-B (U+FE70–U+FEFF)
+            "65024-65279",
         ]
         for fontStack in fontStacks {
+            let encoded = fontStack.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? fontStack
             for range in glyphRanges {
-                urls.append("https://api.mapbox.com/fonts/v1/mapbox/\(fontStack)/\(range).pbf?access_token=\(token)")
+                urls.append("https://api.mapbox.com/fonts/v1/mapbox/\(encoded)/\(range).pbf?access_token=\(token)")
             }
         }
 
@@ -155,10 +163,10 @@ final class TileDownloadManager {
 
         // Build the list of tile URLs
         var tileURLs: [(url: String, regionPrefix: String)] = []
-        for z in minZoom...maxZoom {
+        for z in minZoom ... maxZoom {
             let tileRange = Self.tileRange(bbox: bbox, zoom: z)
-            for x in tileRange.xMin...tileRange.xMax {
-                for y in tileRange.yMin...tileRange.yMax {
+            for x in tileRange.xMin ... tileRange.xMax {
+                for y in tileRange.yMin ... tileRange.yMax {
                     for source in activeSources {
                         let url = source.url(z: z, x: x, y: y, token: mapboxToken)
                         tileURLs.append((url: url, regionPrefix: regionId))
@@ -251,7 +259,8 @@ final class TileDownloadManager {
 
                 if let data = data,
                    let httpResponse = response as? HTTPURLResponse,
-                   (200...299).contains(httpResponse.statusCode) {
+                   (200 ... 299).contains(httpResponse.statusCode)
+                {
                     self.cacheManager.put(url: tile.url, data: data)
 
                     statsLock.lock()
@@ -348,7 +357,8 @@ final class TileDownloadManager {
 
     static func loadAllRegionMeta() -> [String: RegionMeta] {
         guard let data = UserDefaults.standard.data(forKey: metaKey),
-              let decoded = try? JSONDecoder().decode([String: RegionMeta].self, from: data) else {
+              let decoded = try? JSONDecoder().decode([String: RegionMeta].self, from: data)
+        else {
             return [:]
         }
 

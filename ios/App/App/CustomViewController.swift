@@ -1,7 +1,7 @@
-import UIKit
 import Capacitor
-import WebKit
 import Network
+import UIKit
+import WebKit
 
 /// Custom subclass of CAPBridgeViewController that registers the
 /// `cachedtile://` WKURLSchemeHandler BEFORE the WKWebView is created.
@@ -15,7 +15,6 @@ import Network
 /// CAPBridgeViewController (customClass="CustomViewController",
 /// customModule="App").
 class CustomViewController: CAPBridgeViewController {
-
     /// Shared TileCacheManager used by both the scheme handler and the plugin.
     static let sharedCacheManager = TileCacheManager()
 
@@ -72,11 +71,9 @@ class CustomViewController: CAPBridgeViewController {
     /// onReceivedError). Shows the offline fallback if the main frame
     /// fails to load due to a network error.
     private func installNavigationErrorHandler() {
-        webViewObservation = webView?.observe(\.url, options: []) { _, _ in }
         navigationDelegate = WebViewNavigationDelegate(controller: self)
     }
 
-    private var webViewObservation: NSKeyValueObservation?
     private var navigationDelegate: WebViewNavigationDelegate?
 
     fileprivate func loadOfflinePage() {
@@ -94,9 +91,10 @@ class CustomViewController: CAPBridgeViewController {
 /// Monitors WKWebView navigation failures and shows the offline page when
 /// the main frame fails to load (matching Android's onReceivedError behavior).
 private class WebViewNavigationDelegate: NSObject, WKNavigationDelegate {
-
     weak var controller: CustomViewController?
-    private weak var originalDelegate: WKNavigationDelegate?
+    /// Strong reference: Capacitor's delegate would be released when we replace
+    /// webView.navigationDelegate, so we must retain it ourselves.
+    private var originalDelegate: WKNavigationDelegate?
 
     init(controller: CustomViewController) {
         self.controller = controller
@@ -119,7 +117,7 @@ private class WebViewNavigationDelegate: NSObject, WKNavigationDelegate {
         originalDelegate?.webView?(webView, didFailProvisionalNavigation: navigation, withError: error)
     }
 
-    private func handleError(_ error: Error, webView: WKWebView) {
+    private func handleError(_ error: Error, webView _: WKWebView) {
         let nsError = error as NSError
         let networkErrors: Set<Int> = [
             NSURLErrorNotConnectedToInternet,
