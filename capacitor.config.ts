@@ -11,18 +11,10 @@ const config: CapacitorConfig = {
     cleartext: true, // Remove when HTTPS is ready
     allowNavigation: ['20.196.25.174', 'spotlight.trustsky.tii.ae', '*.mapbox.com'],
   },
-  plugins: {
-    SplashScreen: {
-      backgroundColor: '#131318',
-      launchAutoHide: true,
-      autoHideDelay: 2000,
-      showSpinner: false,
-    },
-    // StatusBar: removed @capacitor/status-bar (incompatible with
-    // capacitor-swift-pm 8.0.x). Status bar is styled natively:
-    //   Android: styles.xml android:statusBarColor
-    //   iOS: Info.plist UIStatusBarStyle + preferredStatusBarStyle
-  },
+  // SplashScreen and StatusBar are handled natively (not via plugins)
+  // due to Capacitor 8.0.x Swift PM incompatibilities.
+  //   Splash: Android styles.xml Theme.SplashScreen, iOS LaunchScreen.storyboard
+  //   StatusBar: Android styles.xml, iOS Info.plist + CustomViewController
   android: {
     allowMixedContent: true,
   },

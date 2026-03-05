@@ -6,7 +6,7 @@
 - [ ] Test on iOS simulator -- verify login, map rendering, `cachedtile://` scheme
 - [ ] Offline test -- browse map area, enable airplane mode, confirm cached tiles render
 - [ ] Trigger UAE region download via plugin, verify progress events and cache stats
-- [ ] Set `COOKIE_SAME_SITE=lax` on server, verify auth works in Capacitor WebView
+- [x] Set `COOKIE_SAME_SITE=lax` on server, verify auth works in Capacitor WebView
 
 ## HTTPS Migration
 
@@ -169,10 +169,11 @@ mobile-only UI and behavior. Native code lives in this repo
 
 ### Field Operator Features
 
-- [ ] **Operator location on map** -- show the operator's live GPS
+- [x] **Operator location on map** -- show the operator's live GPS
       position on the drone map using `@capacitor/geolocation` with
-      background mode. Useful for field teams coordinating near
-      active flights.
+      Google Maps-style button (tracking + compass modes). Hook at
+      `trustsky-spotlight/src/hooks/useOperatorLocation.ts`, control at
+      `trustsky-spotlight/src/components/map/OperatorLocationControl.tsx`.
 - [ ] **Biometric login** -- fingerprint or face unlock to skip
       password entry on trusted devices. Use `capacitor-native-biometric`
       plugin. Stores session token in secure enclave.
