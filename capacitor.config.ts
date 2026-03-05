@@ -1,0 +1,35 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const serverUrl = process.env.SPOTLIGHT_SERVER_URL || 'http://20.196.25.174:3000';
+
+const config: CapacitorConfig = {
+  appId: 'ae.trustsky.spotlight',
+  appName: 'TrustSky Spotlight',
+  webDir: 'www',
+  server: {
+    url: serverUrl,
+    cleartext: true, // Remove when HTTPS is ready
+    allowNavigation: ['20.196.25.174', 'spotlight.trustsky.tii.ae', '*.mapbox.com'],
+  },
+  plugins: {
+    SplashScreen: {
+      backgroundColor: '#131318',
+      launchAutoHide: true,
+      autoHideDelay: 2000,
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#131318',
+    },
+  },
+  android: {
+    allowMixedContent: true,
+  },
+  ios: {
+    contentInset: 'automatic',
+    scheme: 'TrustSky Spotlight',
+  },
+};
+
+export default config;

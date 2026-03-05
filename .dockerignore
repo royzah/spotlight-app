@@ -1,0 +1,19 @@
+# Keep Docker context small and fast
+.git
+.github
+node_modules
+build-output
+build
+dist
+ios
+fastlane
+scripts
+*.md
+.env*
+!.env.example
+.DS_Store
+.idea
+.vscode
+*.keystore
+*.jks
+*.p12

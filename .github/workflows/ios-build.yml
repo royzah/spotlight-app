@@ -1,0 +1,110 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prettier check
+        run: npx prettier --check '**/*.{ts,md,yml,yaml,json,html}'
+
+      - name: Markdown lint
+        run: npx markdownlint '*.md' --ignore node_modules
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  build:
+    needs: lint
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      - name: Resolve Swift packages
+        working-directory: ios/App
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project App.xcodeproj \
+            -scheme App
+
+      - name: Build debug (no signing)
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ../../build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      # ── Release (on tag push) ──────────────────────────────
+      - uses: ruby/setup-ruby@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install Fastlane
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: gem install fastlane
+
+      - name: Fetch certificates
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: fastlane ios certificates
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build release IPA
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: fastlane ios build_release
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+
+      - name: Upload IPA artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-ios
+          path: build-output/TrustSkySpotlight-release.ipa
+          retention-days: 90
+
+      - name: Upload to TestFlight
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          fastlane deliver --ipa build-output/TrustSkySpotlight-release.ipa \
+            --skip_screenshots --skip_metadata
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}

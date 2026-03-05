@@ -1,0 +1,9 @@
+app_identifier "ae.trustsky.spotlight"
+
+# iOS
+apple_id ENV["APPLE_ID"]
+team_id ENV["APPLE_TEAM_ID"]
+
+# Android
+json_key_file ENV["GOOGLE_PLAY_JSON_KEY_PATH"]
+package_name "ae.trustsky.spotlight"

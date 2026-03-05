@@ -1,0 +1,86 @@
+default_platform(:ios)
+
+# ── iOS ──────────────────────────────────────────────────────
+platform :ios do
+  desc "Fetch certificates and provisioning profiles via Match"
+  lane :certificates do
+    match(type: "development")
+    match(type: "appstore")
+  end
+
+  desc "Build debug IPA"
+  lane :build_dev do
+    build_ios_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      configuration: "Debug",
+      export_method: "development",
+      output_directory: "build-output",
+      output_name: "TrustSkySpotlight-debug.ipa"
+    )
+  end
+
+  desc "Build release IPA"
+  lane :build_release do
+    increment_build_number(
+      build_number: ENV["BUILD_NUMBER"] || Time.now.strftime("%Y%m%d%H%M"),
+      xcodeproj: "ios/App/App.xcodeproj"
+    )
+    build_ios_app(
+      project: "ios/App/App.xcodeproj",
+      scheme: "App",
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build-output",
+      output_name: "TrustSkySpotlight-release.ipa"
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    certificates
+    build_release
+    upload_to_testflight(skip_waiting_for_build_processing: true)
+  end
+end
+
+# ── Android ──────────────────────────────────────────────────
+platform :android do
+  desc "Build debug APK"
+  lane :build_dev do
+    gradle(
+      project_dir: "android",
+      task: "assembleDebug"
+    )
+    # Copy to standard output location
+    sh("cp ../android/app/build/outputs/apk/debug/app-debug.apk ../build-output/app-debug.apk 2>/dev/null || true")
+  end
+
+  desc "Build release AAB"
+  lane :build_release do
+    gradle(
+      project_dir: "android",
+      task: "bundleRelease",
+      properties: {
+        "android.injected.signing.store.file" => ENV["ANDROID_KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["ANDROID_KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias" => ENV["ANDROID_KEY_ALIAS"],
+        "android.injected.signing.key.password" => ENV["ANDROID_KEY_PASSWORD"],
+      }
+    )
+    sh("cp ../android/app/build/outputs/bundle/release/app-release.aab ../build-output/app-release.aab 2>/dev/null || true")
+  end
+
+  desc "Build and upload to Play Store internal track"
+  lane :beta do
+    build_release
+    upload_to_play_store(
+      track: "internal",
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      json_key_data: ENV["GOOGLE_PLAY_JSON_KEY"],
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end

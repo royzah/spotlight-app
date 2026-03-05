@@ -1,0 +1,16 @@
+node_modules/
+dist/
+android/app/build/
+android/.gradle/
+android/capacitor-cordova-android-plugins/
+ios/capacitor-cordova-ios-plugins/
+ios/App/CapApp-SPM/
+ios/App/App/public/
+build-output/
+*.java
+*.swift
+*.gradle
+*.pbxproj
+*.storyboard
+*.plist
+*.xcconfig

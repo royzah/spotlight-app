@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext only for the dev server IP. Remove when HTTPS is ready. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">20.196.25.174</domain>
+    </domain-config>
+
+    <!-- Block cleartext everywhere else (HTTPS required) -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

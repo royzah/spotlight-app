@@ -1,0 +1,50 @@
+services:
+  # ── Build a debug APK ──────────────────────────────────────
+  # Usage: docker compose run android-build
+  # Output: ./build-output/app-debug.apk
+  android-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build-debug
+    volumes:
+      - ./build-output:/output
+    command: >
+      sh -c "
+        cp /app/android/app/build/outputs/apk/debug/app-debug.apk /output/app-debug.apk &&
+        echo '✓ Debug APK copied to ./build-output/app-debug.apk'
+      "
+
+  # ── Build a release AAB ────────────────────────────────────
+  # Usage: docker compose run android-release
+  # Output: ./build-output/app-release.aab
+  android-release:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build-release
+    volumes:
+      - ./build-output:/output
+    command: >
+      sh -c "
+        cp /app/android/app/build/outputs/bundle/release/app-release.aab /output/app-release.aab &&
+        echo '✓ Release AAB copied to ./build-output/app-release.aab'
+      "
+
+  # ── Interactive shell with full SDK ────────────────────────
+  # Usage: docker compose run android-shell
+  # For running arbitrary gradle/cap commands
+  android-shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    command: bash
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules:

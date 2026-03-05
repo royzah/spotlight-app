@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+
+# TypeScript build
+dist/
+
+# Build artifacts
+build-output/
+build/
+*.apk
+*.aab
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Android
+android/app/build/
+android/.gradle/
+android/capacitor-cordova-android-plugins/build/
+local.properties
+google-services.json
+
+# iOS
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/DerivedData/
+*.xcuserstate
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Signing keys -- never commit
+*.keystore
+*.jks
+*.p12
+*.p8
+*.pem
+*.mobileprovision
+*.provisionprofile
+
+# Fastlane auto-generated
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/README.md
+
+# npm
+.npmrc
+npm-debug.log*
