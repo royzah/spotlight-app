@@ -71,10 +71,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Create or update the "debug-latest" pre-release
-          gh release delete debug-latest --yes 2>/dev/null || true
-          git tag -f debug-latest
-          git push origin debug-latest --force
+          # Remove old release + tag, then recreate
+          gh release delete debug-latest --cleanup-tag --yes 2>/dev/null || true
           gh release create debug-latest \
             build-output/trustsky-spotlight-debug.apk \
             --title "Debug Build (latest)" \

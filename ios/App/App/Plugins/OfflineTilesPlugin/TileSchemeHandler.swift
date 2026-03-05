@@ -16,6 +16,8 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
     private let cacheManager: TileCacheManager
     /// Active URLSessionDataTasks keyed by the scheme task's hash for cancellation.
     private var activeTasks: [Int: URLSessionDataTask] = [:]
+    /// Hashes of scheme tasks that have not yet been stopped or finished.
+    private var validTasks: Set<Int> = []
     private let lock = NSLock()
 
     // MARK: - Init
@@ -28,8 +30,14 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
     // MARK: - WKURLSchemeHandler
 
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
+        let taskHash = urlSchemeTask.hash
+
+        lock.lock()
+        validTasks.insert(taskHash)
+        lock.unlock()
+
         guard let requestURL = urlSchemeTask.request.url else {
-            urlSchemeTask.didFailWithError(SchemeError.invalidURL)
+            finishWithError(urlSchemeTask, error: SchemeError.invalidURL)
             return
         }
 
@@ -46,45 +54,34 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
                 expectedContentLength: cachedData.count,
                 textEncodingName: nil
             )
-            urlSchemeTask.didReceive(response)
-            urlSchemeTask.didReceive(cachedData)
-            urlSchemeTask.didFinish()
+            deliverResponse(urlSchemeTask, response: response, data: cachedData)
             return
         }
 
         // --- Cache miss — fetch from network ---
         guard let fetchURL = URL(string: originalURLString) else {
-            urlSchemeTask.didFailWithError(SchemeError.invalidURL)
+            finishWithError(urlSchemeTask, error: SchemeError.invalidURL)
             return
         }
 
         let task = URLSession.shared.dataTask(with: fetchURL) { [weak self] data, response, error in
             guard let self = self else { return }
 
-            // Remove from active tasks
+            // Remove from active network tasks
             self.lock.lock()
-            self.activeTasks.removeValue(forKey: urlSchemeTask.hash)
-            self.lock.unlock()
+            self.activeTasks.removeValue(forKey: taskHash)
+            lock.unlock()
 
             if let error = error {
-                // Task may have been cancelled — guard against calling didFailWithError
-                // on an already-stopped scheme task.
+                // Task was cancelled via stop — just bail out
                 if (error as NSError).code == NSURLErrorCancelled { return }
-                do {
-                    urlSchemeTask.didFailWithError(error)
-                } catch {
-                    // urlSchemeTask may already be invalidated
-                }
+                self.finishWithError(urlSchemeTask, error: error)
                 return
             }
 
             guard let data = data, let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
-                do {
-                    urlSchemeTask.didFailWithError(SchemeError.fetchFailed)
-                } catch {
-                    // urlSchemeTask may already be invalidated
-                }
+                self.finishWithError(urlSchemeTask, error: SchemeError.fetchFailed)
                 return
             }
 
@@ -99,28 +96,49 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
                 expectedContentLength: data.count,
                 textEncodingName: nil
             )
-
-            do {
-                urlSchemeTask.didReceive(wkResponse)
-                urlSchemeTask.didReceive(data)
-                urlSchemeTask.didFinish()
-            } catch {
-                // urlSchemeTask may already be invalidated if stop was called
-            }
+            self.deliverResponse(urlSchemeTask, response: wkResponse, data: data)
         }
 
         lock.lock()
-        activeTasks[urlSchemeTask.hash] = task
+        activeTasks[taskHash] = task
         lock.unlock()
 
         task.resume()
     }
 
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
+        let taskHash = urlSchemeTask.hash
+
         lock.lock()
-        let task = activeTasks.removeValue(forKey: urlSchemeTask.hash)
+        validTasks.remove(taskHash)
+        let networkTask = activeTasks.removeValue(forKey: taskHash)
         lock.unlock()
-        task?.cancel()
+
+        networkTask?.cancel()
+    }
+
+    // MARK: - Private Helpers
+
+    /// Deliver a successful response to the scheme task, guarded against invalidation.
+    private func deliverResponse(_ task: WKURLSchemeTask, response: URLResponse, data: Data) {
+        lock.lock()
+        let isValid = validTasks.remove(task.hash) != nil
+        lock.unlock()
+
+        guard isValid else { return }
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    /// Deliver an error to the scheme task, guarded against invalidation.
+    private func finishWithError(_ task: WKURLSchemeTask, error: Error) {
+        lock.lock()
+        let isValid = validTasks.remove(task.hash) != nil
+        lock.unlock()
+
+        guard isValid else { return }
+        task.didFailWithError(error)
     }
 
     // MARK: - MIME Type Detection

@@ -1,4 +1,21 @@
 services:
+  # ── Lint (matches CI) ───────────────────────────────────────
+  # Usage: docker compose run lint
+  lint:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    command: >
+      sh -c "
+        npm ci --prefer-offline --no-audit &&
+        npx prettier --check '**/*.{ts,md,yml,yaml,json,html}' &&
+        npx markdownlint '*.md' --ignore node_modules &&
+        npx tsc --noEmit &&
+        echo '✓ All lint checks passed'
+      "
+
   # ── Build a debug APK ──────────────────────────────────────
   # Usage: docker compose run android-build
   # Output: ./build-output/app-debug.apk

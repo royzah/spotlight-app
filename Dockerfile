@@ -11,15 +11,24 @@ FROM node:22-slim AS base
 # Avoid prompts during package installs
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install JDK 21 (via Adoptium) + basic tools
+# Install JDK 21 (tarball, avoids flaky APT repo GPG keys) + basic tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget unzip git gnupg && \
-    wget -qO- https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb bookworm main" > /etc/apt/sources.list.d/adoptium.list && \
-    apt-get update && apt-get install -y --no-install-recommends temurin-21-jdk && \
+    ca-certificates wget unzip git && \
     rm -rf /var/lib/apt/lists/*
 
-ENV JAVA_HOME=/usr/lib/jvm/temurin-21-jdk-amd64
+ENV JAVA_HOME=/opt/java/temurin-21
+ENV PATH=${JAVA_HOME}/bin:${PATH}
+
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+      amd64) JDK_ARCH="x64" ;; \
+      arm64) JDK_ARCH="aarch64" ;; \
+      *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
+    esac && \
+    wget -q "https://api.adoptium.net/v3/binary/latest/21/ga/linux/${JDK_ARCH}/jdk/hotspot/normal/eclipse?project=jdk" -O /tmp/jdk.tar.gz && \
+    mkdir -p ${JAVA_HOME} && \
+    tar -xzf /tmp/jdk.tar.gz -C ${JAVA_HOME} --strip-components=1 && \
+    rm /tmp/jdk.tar.gz
 
 # ── Android SDK ──────────────────────────────────────────────
 ENV ANDROID_HOME=/opt/android-sdk

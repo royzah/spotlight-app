@@ -41,38 +41,34 @@ public class OfflineTilesPlugin extends Plugin {
     interceptor = new TileInterceptor(cacheManager);
     downloadManager = new TileDownloadManager(cacheManager);
 
-    // Set up WebView interceptor by replacing the WebViewClient
-    // with one that delegates tile requests to our interceptor.
+    // Replace the WebViewClient BEFORE Capacitor loads the server URL.
+    // This must NOT be deferred with post() — otherwise the default error
+    // page shows on network failure instead of our custom offline page.
     Bridge bridge = getBridge();
-    bridge
-        .getWebView()
-        .post(
-            () ->
-                bridge.setWebViewClient(
-                    new BridgeWebViewClient(bridge) {
-                      @Override
-                      public WebResourceResponse shouldInterceptRequest(
-                          WebView view, WebResourceRequest request) {
-                        if (interceptor.isEnabled()) {
-                          WebResourceResponse resp = interceptor.intercept(request);
-                          if (resp != null) return resp;
-                        }
-                        return super.shouldInterceptRequest(view, request);
-                      }
+    bridge.setWebViewClient(
+        new BridgeWebViewClient(bridge) {
+          @Override
+          public WebResourceResponse shouldInterceptRequest(
+              WebView view, WebResourceRequest request) {
+            if (interceptor.isEnabled()) {
+              WebResourceResponse resp = interceptor.intercept(request);
+              if (resp != null) return resp;
+            }
+            return super.shouldInterceptRequest(view, request);
+          }
 
-                      @Override
-                      public void onReceivedError(
-                          WebView view, WebResourceRequest request, WebResourceError error) {
-                        if (request.isForMainFrame()) {
-                          Log.w(TAG, "Main frame load failed: " + error.getDescription());
-                          String retryUrl = request.getUrl().toString();
-                          view.loadUrl(
-                              "file:///android_asset/public/index.html#retry=" + retryUrl);
-                          return;
-                        }
-                        super.onReceivedError(view, request, error);
-                      }
-                    }));
+          @Override
+          public void onReceivedError(
+              WebView view, WebResourceRequest request, WebResourceError error) {
+            if (request.isForMainFrame()) {
+              Log.w(TAG, "Main frame load failed: " + error.getDescription());
+              String retryUrl = request.getUrl().toString();
+              view.loadUrl("file:///android_asset/public/index.html#retry=" + retryUrl);
+              return;
+            }
+            super.onReceivedError(view, request, error);
+          }
+        });
 
     Log.d(TAG, "OfflineTilesPlugin loaded, interceptor installed");
   }
