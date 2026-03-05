@@ -216,7 +216,7 @@ mobile-only UI and behavior. Native code lives in this repo
 
 ### Broadcast Remote ID (BRID) Scanner
 
-- [ ] **Detect nearby drones via Bluetooth/WiFi Remote ID** -- scan for
+- [x] **Detect nearby drones via Bluetooth/WiFi Remote ID** -- scan for
       ASTM F3411 / ASD-STAN prEN 4709-002 Broadcast Remote ID signals
       and display detected drones on the map, behaving exactly like
       existing telemetry-based `DroneMarkers`.

@@ -68,5 +68,7 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TrustSky Spotlight uses your location to show nearby drone activity on the map.</string>
+	<key>NSBluetoothAlwaysAndWhenInUseUsageDescription</key>
+	<string>TrustSky Spotlight uses Bluetooth to detect nearby drones broadcasting Remote ID signals.</string>
 </dict>
 </plist>

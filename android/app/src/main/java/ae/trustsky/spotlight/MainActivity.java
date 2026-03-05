@@ -1,5 +1,6 @@
 package ae.trustsky.spotlight;
 
+import ae.trustsky.spotlight.plugins.BroadcastRemoteIdPlugin;
 import ae.trustsky.spotlight.plugins.OfflineTilesPlugin;
 import android.os.Bundle;
 import android.view.View;
@@ -12,6 +13,7 @@ public class MainActivity extends BridgeActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     registerPlugin(OfflineTilesPlugin.class);
+    registerPlugin(BroadcastRemoteIdPlugin.class);
     super.onCreate(savedInstanceState);
 
     // Disable edge-to-edge: fit content between status bar and navigation bar.
