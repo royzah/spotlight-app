@@ -6,7 +6,6 @@ import Foundation
 /// Uses slippy-map math to convert lat/lon bbox to tile coordinates, then
 /// fetches vector, satellite, and terrain tiles concurrently (max 4 at a time).
 final class TileDownloadManager {
-
     // MARK: - Types
 
     /// Progress callback delivered on every tile completion.
@@ -48,6 +47,48 @@ final class TileDownloadManager {
                 return "https://api.mapbox.com/v4/mapbox.terrain-rgb/\(z)/\(x)/\(y).pngraw?access_token=\(token)"
             }
         }
+    }
+
+    // MARK: - Style Resource URLs
+
+    /// Build URLs for style JSON, sprites, and glyph ranges (matching Android).
+    private static func buildResourceURLs(styleName: String?, token: String) -> [String] {
+        guard let styleName = styleName, !styleName.isEmpty else { return [] }
+
+        var urls: [String] = []
+
+        // Style JSON
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)?access_token=\(token)")
+        // Sprite JSON + PNG
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)/sprite@2x.json?access_token=\(token)")
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)/sprite@2x.png?access_token=\(token)")
+
+        // Common glyph ranges for Latin + Arabic text
+        let fontStacks = [
+            "DIN Pro Regular,Arial Unicode MS Regular",
+            "DIN Pro Medium,Arial Unicode MS Regular",
+            "DIN Pro Bold,Arial Unicode MS Bold",
+        ]
+        let glyphRanges = [
+            // Latin, Latin Extended, Greek, Cyrillic
+            "0-255", "256-511", "512-767", "768-1023",
+            // Arabic (U+0600–U+06FF) and Arabic Supplement (U+0750–U+077F)
+            "1536-1791", "1792-2047",
+            // General Punctuation, Superscripts
+            "8192-8447", "8448-8703",
+            // Arabic Presentation Forms-A (U+FB50–U+FDFF)
+            "64256-64511", "64512-64767", "64768-65023",
+            // Variation Selectors + Arabic Presentation Forms-B (U+FE70–U+FEFF)
+            "65024-65279",
+        ]
+        for fontStack in fontStacks {
+            let encoded = fontStack.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? fontStack
+            for range in glyphRanges {
+                urls.append("https://api.mapbox.com/fonts/v1/mapbox/\(encoded)/\(range).pbf?access_token=\(token)")
+            }
+        }
+
+        return urls
     }
 
     // MARK: - Properties
@@ -97,6 +138,7 @@ final class TileDownloadManager {
         maxZoom: Int,
         mapboxToken: String,
         sources: [String]? = nil,
+        styleName: String? = nil,
         progress: @escaping ProgressCallback
     ) {
         // Mark as active
@@ -121,16 +163,21 @@ final class TileDownloadManager {
 
         // Build the list of tile URLs
         var tileURLs: [(url: String, regionPrefix: String)] = []
-        for z in minZoom...maxZoom {
+        for z in minZoom ... maxZoom {
             let tileRange = Self.tileRange(bbox: bbox, zoom: z)
-            for x in tileRange.xMin...tileRange.xMax {
-                for y in tileRange.yMin...tileRange.yMax {
+            for x in tileRange.xMin ... tileRange.xMax {
+                for y in tileRange.yMin ... tileRange.yMax {
                     for source in activeSources {
                         let url = source.url(z: z, x: x, y: y, token: mapboxToken)
                         tileURLs.append((url: url, regionPrefix: regionId))
                     }
                 }
             }
+        }
+
+        // Add style, sprite, and glyph resource URLs
+        for url in Self.buildResourceURLs(styleName: styleName, token: mapboxToken) {
+            tileURLs.append((url: url, regionPrefix: regionId))
         }
 
         let totalTiles = tileURLs.count
@@ -212,7 +259,8 @@ final class TileDownloadManager {
 
                 if let data = data,
                    let httpResponse = response as? HTTPURLResponse,
-                   (200...299).contains(httpResponse.statusCode) {
+                   (200 ... 299).contains(httpResponse.statusCode)
+                {
                     self.cacheManager.put(url: tile.url, data: data)
 
                     statsLock.lock()
@@ -309,7 +357,8 @@ final class TileDownloadManager {
 
     static func loadAllRegionMeta() -> [String: RegionMeta] {
         guard let data = UserDefaults.standard.data(forKey: metaKey),
-              let decoded = try? JSONDecoder().decode([String: RegionMeta].self, from: data) else {
+              let decoded = try? JSONDecoder().decode([String: RegionMeta].self, from: data)
+        else {
             return [:]
         }
 

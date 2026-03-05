@@ -48,12 +48,7 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
         // --- Cache hit ---
         if let cachedData = cacheManager.get(url: originalURLString) {
             let mimeType = Self.mimeType(for: originalURLString)
-            let response = URLResponse(
-                url: requestURL,
-                mimeType: mimeType,
-                expectedContentLength: cachedData.count,
-                textEncodingName: nil
-            )
+            let response = Self.httpResponse(url: requestURL, mimeType: mimeType, dataLength: cachedData.count)
             deliverResponse(urlSchemeTask, response: response, data: cachedData)
             return
         }
@@ -90,12 +85,7 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
 
             // Deliver to WKWebView
             let mimeType = Self.mimeType(for: originalURLString)
-            let wkResponse = URLResponse(
-                url: requestURL,
-                mimeType: mimeType,
-                expectedContentLength: data.count,
-                textEncodingName: nil
-            )
+            let wkResponse = Self.httpResponse(url: requestURL, mimeType: mimeType, dataLength: data.count)
             self.deliverResponse(urlSchemeTask, response: wkResponse, data: data)
         }
 
@@ -139,6 +129,23 @@ final class TileSchemeHandler: NSObject, WKURLSchemeHandler {
 
         guard isValid else { return }
         task.didFailWithError(error)
+    }
+
+    // MARK: - Response Builder
+
+    /// Build an HTTPURLResponse with CORS headers so WKWebView doesn't block
+    /// cross-origin loads from the custom cachedtile:// scheme.
+    private static func httpResponse(url: URL, mimeType: String, dataLength: Int) -> HTTPURLResponse {
+        HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: [
+                "Content-Type": mimeType,
+                "Content-Length": "\(dataLength)",
+                "Access-Control-Allow-Origin": "*",
+            ]
+        )!
     }
 
     // MARK: - MIME Type Detection
