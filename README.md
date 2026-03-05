@@ -11,11 +11,11 @@ caching for Mapbox maps.
 | **Android min** | SDK 29 (Android 10)              |
 | **iOS min**     | 16.0                             |
 | **Java**        | JDK 21 (required by Capacitor 8) |
-| **Node**        | 20+                              |
+| **Node**        | 22+ (required by Capacitor 8)    |
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - JDK 21 (`sudo apt install openjdk-21-jdk-headless` on Ubuntu)
 - For local Android builds: Android SDK 35+
 - For local iOS builds: macOS with Xcode 15+

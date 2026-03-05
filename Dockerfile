@@ -6,7 +6,7 @@
 #   docker compose run android-release        # release AAB
 # ──────────────────────────────────────────────────────────────
 
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 
 # Avoid prompts during package installs
 ENV DEBIAN_FRONTEND=noninteractive
