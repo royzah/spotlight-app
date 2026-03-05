@@ -70,6 +70,7 @@ class OfflineTilesPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let sources = call.getArray("sources", String.self)
+        let styleName = call.getString("styleName")
 
         let bbox = (west: west, south: south, east: east, north: north)
 
@@ -82,7 +83,8 @@ class OfflineTilesPlugin: CAPPlugin, CAPBridgedPlugin {
             minZoom: minZoom,
             maxZoom: maxZoom,
             mapboxToken: mapboxToken,
-            sources: sources
+            sources: sources,
+            styleName: styleName
         ) { [weak self] completed, total, bytes, isComplete, error in
             var data: [String: Any] = [
                 "regionId": regionId,

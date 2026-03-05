@@ -50,6 +50,39 @@ final class TileDownloadManager {
         }
     }
 
+    // MARK: - Style Resource URLs
+
+    /// Build URLs for style JSON, sprites, and glyph ranges (matching Android).
+    private static func buildResourceURLs(styleName: String?, token: String) -> [String] {
+        guard let styleName = styleName, !styleName.isEmpty else { return [] }
+
+        var urls: [String] = []
+
+        // Style JSON
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)?access_token=\(token)")
+        // Sprite JSON + PNG
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)/sprite@2x.json?access_token=\(token)")
+        urls.append("https://api.mapbox.com/styles/v1/mapbox/\(styleName)/sprite@2x.png?access_token=\(token)")
+
+        // Common glyph ranges for Latin + Arabic text
+        let fontStacks = [
+            "DIN Pro Regular,Arial Unicode MS Regular",
+            "DIN Pro Medium,Arial Unicode MS Regular",
+            "DIN Pro Bold,Arial Unicode MS Bold"
+        ]
+        let glyphRanges = [
+            "0-255", "256-511", "512-767", "768-1023",
+            "8192-8447", "8448-8703", "65024-65279"
+        ]
+        for fontStack in fontStacks {
+            for range in glyphRanges {
+                urls.append("https://api.mapbox.com/fonts/v1/mapbox/\(fontStack)/\(range).pbf?access_token=\(token)")
+            }
+        }
+
+        return urls
+    }
+
     // MARK: - Properties
 
     private let cacheManager: TileCacheManager
@@ -97,6 +130,7 @@ final class TileDownloadManager {
         maxZoom: Int,
         mapboxToken: String,
         sources: [String]? = nil,
+        styleName: String? = nil,
         progress: @escaping ProgressCallback
     ) {
         // Mark as active
@@ -131,6 +165,11 @@ final class TileDownloadManager {
                     }
                 }
             }
+        }
+
+        // Add style, sprite, and glyph resource URLs
+        for url in Self.buildResourceURLs(styleName: styleName, token: mapboxToken) {
+            tileURLs.append((url: url, regionPrefix: regionId))
         }
 
         let totalTiles = tileURLs.count
