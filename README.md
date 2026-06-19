@@ -7,7 +7,7 @@ caching for Mapbox maps.
 |                 |                                  |
 | --------------- | -------------------------------- |
 | **App ID**      | `ae.trustsky.spotlight`          |
-| **Server**      | `http://20.196.25.174:3000`      |
+| **Server**      | `https://20.203.65.213`          |
 | **Android min** | SDK 29 (Android 10)              |
 | **iOS min**     | 16.0                             |
 | **Java**        | JDK 21 (required by Capacitor 8) |

@@ -8,7 +8,7 @@ Loads from a remote server with native tile caching for offline map support.
 ## Quick Reference
 
 - **App ID**: `ae.trustsky.spotlight`
-- **Server**: `http://20.196.25.174:3000` (will become `https://spotlight.trustsky.tii.ae`)
+- **Server**: `https://20.203.65.213` (will become `https://spotlight.trustsky.tii.ae`)
 - **Web app repo**: `../trustsky-spotlight/` (runtime dependency only, no shared files)
 - **Min Android**: SDK 29 (Android 10)
 - **Min iOS**: 16.0
@@ -57,8 +57,10 @@ The app loads the web app from the remote server URL. `www/index.html` is an off
 
 ## Important Notes
 
-- `server.cleartext: true` in capacitor.config.ts — remove when HTTPS is ready
-- Android `network_security_config.xml` only allows cleartext to `20.196.25.174`
-- iOS `Info.plist` ATS exception only for `20.196.25.174`
+- Server is HTTPS with a **self-signed cert**. Native trust is scoped to `20.203.65.213` only:
+  - Android: `network_security_config.xml` trust-anchor → `res/raw/spotlight_server.pem` (gitignored — provision the `comms-utm-ca` cert before building)
+  - iOS: `CustomViewController.swift` server-trust handler accepts the cert for that host
+  - The cert must carry `IP Address:20.203.65.213` in its SAN, or hostname verification fails
+  - Remove both once a publicly trusted cert (e.g. `spotlight.trustsky.tii.ae`) is in place
 - `npx cap sync` must be run after any config changes before building
 - Plugin registration in `MainActivity.java` must be BEFORE `super.onCreate()`

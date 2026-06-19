@@ -107,6 +107,32 @@ private class WebViewNavigationDelegate: NSObject, WKNavigationDelegate {
         }
     }
 
+    /// Accept the dev server's private-CA certificate (issued by "comms-utm-ca",
+    /// which is not in iOS's trust store) — but ONLY for that exact host. Every
+    /// other host falls through to normal system trust evaluation.
+    /// Remove this once the server presents a publicly trusted certificate.
+    private static let trustedHost = "20.203.65.213"
+
+    func webView(_ webView: WKWebView,
+                 didReceive challenge: URLAuthenticationChallenge,
+                 completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let space = challenge.protectionSpace
+        if space.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           space.host == Self.trustedHost,
+           let serverTrust = space.serverTrust {
+            completionHandler(.useCredential, URLCredential(trust: serverTrust))
+            return
+        }
+
+        // Anything else: let Capacitor's delegate decide, or fall back to default.
+        if let original = originalDelegate,
+           original.responds(to: #selector(WKNavigationDelegate.webView(_:didReceive:completionHandler:))) {
+            original.webView?(webView, didReceive: challenge, completionHandler: completionHandler)
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         handleError(error, webView: webView)
         originalDelegate?.webView?(webView, didFail: navigation, withError: error)

@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext only for the dev server IP. Remove when HTTPS is ready. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">20.196.25.174</domain>
+    <!-- Dev server (HTTPS, private-CA cert from "comms-utm-ca", not in the
+         system store). We pin the server's bundled cert for this host only.
+         res/raw/spotlight_server.pem holds the leaf; replace with the
+         comms-utm-ca CA cert when available so it survives leaf rotation.
+         NOTE: the cert must also carry IP:20.203.65.213 in its SAN, or Android
+         hostname verification fails even with the cert trusted (see below).
+         Remove this block once the server uses a publicly trusted cert. -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">20.203.65.213</domain>
+        <trust-anchors>
+            <certificates src="@raw/spotlight_server" />
+            <certificates src="system" />
+        </trust-anchors>
     </domain-config>
 
     <!-- Block cleartext everywhere else (HTTPS required) -->

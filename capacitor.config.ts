@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const serverUrl = process.env.SPOTLIGHT_SERVER_URL || 'http://20.196.25.174:3000';
+const serverUrl = process.env.SPOTLIGHT_SERVER_URL || 'https://20.203.65.213';
 
 const config: CapacitorConfig = {
   appId: 'ae.trustsky.spotlight',
@@ -8,8 +8,9 @@ const config: CapacitorConfig = {
   webDir: 'www',
   server: {
     url: serverUrl,
-    cleartext: true, // Remove when HTTPS is ready
-    allowNavigation: ['20.196.25.174', 'spotlight.trustsky.tii.ae', '*.mapbox.com'],
+    cleartext: false, // Server is HTTPS. Private-CA cert trust is handled natively
+    // (Android: network_security_config trust-anchor; iOS: CustomViewController).
+    allowNavigation: ['20.203.65.213', '*.mapbox.com'],
   },
   // SplashScreen and StatusBar are handled natively (not via plugins)
   // due to Capacitor 8.0.x Swift PM incompatibilities.
