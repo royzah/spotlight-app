@@ -51,6 +51,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Provision server CA cert
+        env:
+          SPOTLIGHT_SERVER_CA: ${{ secrets.SPOTLIGHT_SERVER_CA }}
+        run: |
+          if [ -z "$SPOTLIGHT_SERVER_CA" ]; then
+            echo "::error::SPOTLIGHT_SERVER_CA secret is not set. It holds the base64 comms-utm-ca cert that network_security_config.xml pins as @raw/spotlight_server."
+            exit 1
+          fi
+          mkdir -p android/app/src/main/res/raw
+          echo "$SPOTLIGHT_SERVER_CA" | base64 -d > android/app/src/main/res/raw/spotlight_server.pem
+          echo "Wrote $(wc -c < android/app/src/main/res/raw/spotlight_server.pem) bytes"
+
       - name: Sync Capacitor
         run: npx cap sync android
 
