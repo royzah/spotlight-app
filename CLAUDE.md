@@ -57,10 +57,11 @@ The app loads the web app from the remote server URL. `www/index.html` is an off
 
 ## Important Notes
 
-- Server is HTTPS with a **self-signed cert**. Native trust is scoped to `20.203.65.213` only:
-  - Android: `network_security_config.xml` trust-anchor → `res/raw/spotlight_server.pem` (gitignored — provision the `comms-utm-ca` cert before building)
+- Server is HTTPS with a **private-CA cert** (`comms-utm-ca`). Native trust is scoped to `20.203.65.213`:
+  - Android: `network_security_config.xml` pins the CA bundled at `res/raw/spotlight_server.pem`
+  - The `.pem` is gitignored — CI provisions it from the `SPOTLIGHT_SERVER_CA` secret
   - iOS: `CustomViewController.swift` server-trust handler accepts the cert for that host
-  - The cert must carry `IP Address:20.203.65.213` in its SAN, or hostname verification fails
+  - The cert's SAN must include `IP Address:20.203.65.213`, or hostname verification fails
   - Remove both once a publicly trusted cert (e.g. `spotlight.trustsky.tii.ae`) is in place
 - `npx cap sync` must be run after any config changes before building
 - Plugin registration in `MainActivity.java` must be BEFORE `super.onCreate()`
